@@ -186,6 +186,213 @@ footer { padding-top: 8px; text-align: center; color: #7d89a4; font-size: 12px; 
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; }
 }
+
+/* NEXUS AI — Professional Dashboard */
+:root {
+  --bg: #080c18;
+  --surface: #111a2d;
+  --border: #293753;
+  --text: #f1f5ff;
+  --muted: #9eacc6;
+  --accent: #8b7cff;
+  --blue: #56b8ff;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(111, 83, 255, .20), transparent 38%),
+    radial-gradient(ellipse at 88% 12%, rgba(43, 151, 255, .12), transparent 32%),
+    var(--bg);
+  color: var(--text);
+}
+
+main {
+  max-width: 1040px;
+}
+
+header {
+  padding: 32px 0 28px;
+}
+
+h1 {
+  font-size: clamp(38px, 7vw, 58px);
+  font-weight: 850;
+  letter-spacing: 3px;
+  text-shadow: 0 0 35px rgba(139, 124, 255, .18);
+}
+
+h1 span {
+  background: linear-gradient(100deg, var(--accent), var(--blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+header > p:first-of-type {
+  font-size: 20px;
+  font-weight: 650;
+}
+
+nav {
+  gap: 10px;
+  padding: 8px;
+  background: rgba(17, 26, 45, .75);
+  border-color: rgba(139, 124, 255, .22);
+  backdrop-filter: blur(14px);
+}
+
+nav a {
+  flex: 1 1 220px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .025);
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+nav a:hover,
+nav a:focus-visible {
+  background: rgba(139, 124, 255, .14);
+  border-color: rgba(139, 124, 255, .55);
+  transform: translateY(-1px);
+}
+
+.panel {
+  padding: clamp(22px, 4vw, 34px);
+  border-color: rgba(139, 124, 255, .22);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(20, 31, 53, .97), rgba(12, 19, 34, .98));
+  box-shadow: 0 20px 55px rgba(0, 0, 0, .25);
+}
+
+.panel h2 {
+  font-size: clamp(23px, 4vw, 29px);
+  letter-spacing: -.5px;
+}
+
+label {
+  margin-top: 22px;
+  color: #dce5ff;
+}
+
+input,
+select,
+textarea {
+  border-color: #344461;
+  border-radius: 12px;
+  background: #0a1222;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(139, 124, 255, .17);
+}
+
+button {
+  min-height: 50px;
+  border-radius: 12px;
+  background: linear-gradient(105deg, #7160ed, #518de9);
+  box-shadow: 0 9px 25px rgba(103, 91, 238, .22);
+  transition: filter .2s ease, transform .2s ease;
+}
+
+button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.result {
+  padding: 20px;
+  border: 1px solid rgba(139, 124, 255, .2);
+  border-radius: 14px;
+  background: rgba(5, 10, 20, .4);
+}
+
+.panel.error {
+  border-color: #8b4257;
+  background: linear-gradient(145deg, #291923, #191522);
+}
+
+footer {
+  padding: 24px 0 12px;
+}
+
+@media (max-width: 600px) {
+  header {
+    padding-top: 16px;
+  }
+
+  nav a {
+    flex-basis: 100%;
+  }
+
+  .panel {
+    border-radius: 15px;
+  }
+
+  .result {
+    padding: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nav a,
+  button,
+  input,
+  select,
+  textarea {
+    transition: none;
+  }
+}
+/* Career feature cards */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 0 22px;
+}
+
+.feature-card {
+  padding: 20px;
+  border: 1px solid rgba(139, 124, 255, .22);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(24, 33, 57, .95), rgba(13, 21, 37, .95));
+}
+
+.feature-icon {
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.feature-card h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: #f1f5ff;
+}
+
+.feature-card p {
+  margin: 0;
+  color: #9eacc6;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.feature-tag {
+  display: inline-block;
+  margin-top: 12px;
+  color: #b6aaff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 650px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 
 </head>
@@ -201,7 +408,28 @@ footer { padding-top: 8px; text-align: center; color: #7d89a4; font-size: 12px; 
     <a href="/">Resume Analyzer</a>
     <a href="/interview">Interview Copilot</a>
 </nav>
+<section class="feature-grid">
+    <article class="feature-card">
+        <div class="feature-icon">📄</div>
+        <h3>Resume Analysis</h3>
+        <p>Discover your strengths and improve your resume for your target role.</p>
+        <span class="feature-tag">AI-powered insights</span>
+    </article>
 
+    <article class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>Job Matching</h3>
+        <p>Explore how your skills align with job requirements.</p>
+        <span class="feature-tag">Career planning</span>
+    </article>
+
+    <article class="feature-card">
+        <div class="feature-icon">💬</div>
+        <h3>Interview Prep</h3>
+        <p>Prepare with role-specific questions and sample answers.</p>
+        <span class="feature-tag">Practice smarter</span>
+    </article>
+</section>
 <section class="panel">
 {% if page == "resume" %}
     <h2>Resume Analyzer</h2>
@@ -260,7 +488,7 @@ footer { padding-top: 8px; text-align: center; color: #7d89a4; font-size: 12px; 
 
 {% if error %}
 <section class="panel error">
-    <h3>Something went wrong</h3>
+    <h3>{% if "Temporarily Unavailable" in error %}AI Analysis Temporarily Unavailable{% else %}Something went wrong{% endif %}</h3>
     <p>{{ error }}</p>
 </section>
 {% endif %}
@@ -295,6 +523,17 @@ def ask_gemini(prompt):
 
         except Exception as exc:
             message = str(exc).lower()
+
+            quota_exhausted = any(
+                marker in message
+                for marker in (
+                    "you exceeded your current quota",
+                    "quota exceeded for metric",
+                    "free_tier_requests",
+                    "check your plan and billing details"
+                )
+            )
+
             temporary = any(
                 marker in message
                 for marker in (
@@ -305,7 +544,7 @@ def ask_gemini(prompt):
                 )
             )
 
-            if not temporary or attempt == 2:
+            if quota_exhausted or not temporary or attempt == 2:
                 raise
 
             delay = attempt + 1
@@ -423,10 +662,23 @@ candidate lacks a skill. Clearly label suggestions as suggestions.
                         "Please wait a minute and try again."
                     )
                 elif any(code in details for code in (
+                    "you exceeded your current quota",
+                    "quota exceeded for metric",
+                    "free_tier_requests",
+                    "check your plan and billing details"
+                )):
+                    error = (
+                        "AI Analysis Temporarily Unavailable. "
+                        "Gemini AI has reached its current usage quota. "
+                        "Please try again after the quota resets. "
+                        "Your resume details are still on this page, "
+                        "but the analysis has not been completed."
+                    )
+                elif any(code in details for code in (
                     "429", "resource exhausted", "too many requests"
                 )):
                     error = (
-                        "Gemini AI has reached a temporary usage limit. "
+                        "Gemini AI is receiving too many requests right now. "
                         "Please wait a little and try again."
                     )
                 else:
@@ -529,13 +781,45 @@ Explain technical terms simply. Make the answers practical and concise.
                 result = ask_gemini(prompt)
             except Exception as exc:
                 app.logger.warning(
-                    "Interview generation failed: %s", type(exc).__name__
+                    "Interview generation failed: %s: %s",
+                    type(exc).__name__, str(exc)[:500]
                 )
-                error = (
-                    "Gemini could not generate the report. Check your "
-                    "internet connection, API quota, model access, and "
-                    "Terminal logs. Your API key is not displayed."
-                )
+                details = str(exc).lower()
+
+                if any(marker in details for marker in (
+                    "you exceeded your current quota",
+                    "quota exceeded for metric",
+                    "free_tier_requests",
+                    "check your plan and billing details"
+                )):
+                    error = (
+                        "AI Analysis Temporarily Unavailable. "
+                        "Gemini AI has reached its current usage quota. "
+                        "Please try again after the quota resets. "
+                        "Your interview details are still on this page, "
+                        "but the practice answers have not been generated."
+                    )
+                elif any(marker in details for marker in (
+                    "503", "unavailable", "high demand",
+                    "500", "502", "504"
+                )):
+                    error = (
+                        "Gemini AI is temporarily busy. "
+                        "Please wait a minute and try again."
+                    )
+                elif any(marker in details for marker in (
+                    "429", "resource exhausted", "too many requests"
+                )):
+                    error = (
+                        "Gemini AI is receiving too many requests right now. "
+                        "Please wait a little and try again."
+                    )
+                else:
+                    error = (
+                        "Gemini could not generate your interview practice. "
+                        "Please check your connection and model access, "
+                        "then try again. Your API key is not displayed."
+                    )
 
     return render_template_string(
         PAGE, page="interview", resume="", job="",

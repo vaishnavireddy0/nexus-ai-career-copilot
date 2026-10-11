@@ -21,7 +21,13 @@ __pycache__/
 # Python
 .venv/
 __pycache__/
-*.py[cod]
+# Local backups and helper scripts
+app_before_*.py
+app_backup.py
+add_security.py
+redesign_ui.py
+test_gemini.py*.py[cod]
 
 # Mac
 .DS_Store
+test_gemini.py
