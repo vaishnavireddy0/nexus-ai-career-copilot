@@ -1,13 +1,88 @@
 
 import os
 from dotenv import load_dotenv
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, session, redirect, url_for
 from google import genai
 
 # Load the secret API key from .env
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.getenv("SESSION_SECRET")
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE", "false").lower() == "true",
+)
+if not app.secret_key:
+    raise RuntimeError("SESSION_SECRET is missing from .env")
+
+from functools import wraps
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["60 per hour"],
+    storage_uri="memory://",
+)
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("authenticated"):
+            return redirect(url_for("login"))
+        return view(*args, **kwargs)
+    return wrapped
+
+LOGIN_PAGE = """
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXUS AI Login</title>
+<style>
+body{margin:0;background:#080b14;color:#e8ecf8;font-family:Arial,sans-serif;
+display:grid;place-items:center;min-height:100vh;padding:20px}
+form{width:100%;max-width:360px;background:#111727;padding:25px;
+border:1px solid #28324b;border-radius:15px;box-sizing:border-box}
+input,button{box-sizing:border-box;width:100%;padding:13px;margin-top:14px;
+border-radius:8px;font-size:16px}
+input{background:#090e1b;color:white;border:1px solid #34405e}
+button{background:#7664ff;color:white;border:0;font-weight:bold;cursor:pointer}
+.error{color:#ffaaaa}
+</style>
+</head>
+<body><form method="post">
+<h2>NEXUS AI Login</h2><p>Enter your access password.</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<input type="password" name="password" placeholder="Access password"
+required autocomplete="current-password">
+<button type="submit">Log in</button>
+</form></body></html>
+"""
+
+@app.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
+def login():
+    error = None
+    if request.method == "POST":
+        password = os.getenv("APP_PASSWORD")
+        supplied = request.form.get("password", "")
+        if password and supplied and __import__("hmac").compare_digest(supplied, password):
+            session.clear()
+            session["authenticated"] = True
+            return redirect(url_for("resume_analyzer"))
+        error = "Incorrect password. Please try again."
+    return render_template_string(LOGIN_PAGE, error=error)
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+# NEXUS_SECURITY_ADDED
 
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
@@ -167,6 +242,7 @@ def ask_gemini(prompt):
 
 
 @app.route("/", methods=["GET", "POST"])
+@login_required
 def resume_analyzer():
     resume = ""
     job = ""
@@ -237,6 +313,7 @@ candidate lacks a skill. Clearly label suggestions as suggestions.
 
 
 @app.route("/interview", methods=["GET", "POST"])
+@login_required
 def interview_copilot():
     result = None
     error = None
