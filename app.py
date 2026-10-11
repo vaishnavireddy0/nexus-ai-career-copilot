@@ -1,13 +1,19 @@
 
 import os
+import secrets
+import time
 from dotenv import load_dotenv
-from flask import Flask, request, render_template_string, session, redirect, url_for
+from flask import Flask, request, render_template_string, session, redirect, url_for, send_file
+from io import BytesIO
+from pypdf import PdfReader
 from google import genai
 
 # Load the secret API key from .env
 load_dotenv()
 
 app = Flask(__name__)
+REPORTS = {}
+app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
 app.secret_key = os.getenv("SESSION_SECRET")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -96,58 +102,92 @@ PAGE = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NEXUS AI | Career Copilot</title>
+
 <style>
-* { box-sizing: border-box; }
-body {
-    margin: 0; padding: 28px 16px;
-    background: #080b14; color: #e8ecf8;
-    font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+:root {
+  color-scheme: dark;
+  --bg: #0a0d16;
+  --surface: #121a2a;
+  --border: #2b3650;
+  --text: #eef2ff;
+  --muted: #a2aec8;
+  --accent: #9384ff;
 }
-main { max-width: 850px; margin: auto; }
-header { text-align: center; padding: 18px 0 25px; }
-h1 { font-size: clamp(32px, 7vw, 46px); margin: 8px 0; letter-spacing: 3px; }
-h1 span { color: #8b7cff; }
-p { line-height: 1.6; }
-.muted { color: #9ba6c5; }
+* { box-sizing: border-box; }
+html { min-height: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0; padding: 30px 18px;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 50% 0%, #1b1a3b 0, var(--bg) 55%);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+main { max-width: 900px; width: 100%; margin: auto; }
+header { text-align: center; padding: 16px 0 24px; }
+h1 { margin: 0; font-size: clamp(36px, 6vw, 50px); font-weight: 800; letter-spacing: 2px; }
+h1 span { color: var(--accent); }
+p { line-height: 1.7; }
+.muted { color: var(--muted); }
+header > p:first-of-type { font-size: 19px; font-weight: 600; margin: 12px 0 4px; }
+header .muted { font-size: 14px; margin-top: 5px; }
 nav {
-    display: flex; flex-wrap: wrap; gap: 10px;
-    justify-content: center; margin: 20px 0;
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  margin: 12px 0 26px; padding: 7px;
+  border: 1px solid var(--border); border-radius: 14px;
+  background: rgba(18, 26, 42, .9);
 }
 nav a {
-    color: #c9c2ff; text-decoration: none;
-    border: 1px solid #343052; padding: 10px 15px;
-    border-radius: 9px; background: #111727;
+  flex: 1 1 180px; padding: 13px 16px; text-align: center;
+  color: #d9d5ff; text-decoration: none; font-size: 14px; font-weight: 650;
+  border: 1px solid transparent; border-radius: 9px;
 }
-nav a:hover { background: #24203f; }
+nav a:hover, nav a:focus-visible {
+  background: #252643; border-color: #4c4a78; color: white;
+}
 .panel {
-    background: #111727; border: 1px solid #28324b;
-    padding: 22px; border-radius: 16px; margin-bottom: 20px;
+  padding: clamp(20px, 4vw, 32px); margin-bottom: 22px;
+  border: 1px solid var(--border); border-radius: 18px;
+  background: linear-gradient(145deg, #151e30, #101625);
+  box-shadow: 0 14px 38px rgba(0,0,0,.18);
 }
-label { display: block; margin: 18px 0 8px; font-weight: 600; }
+.panel h2 { margin: 0 0 8px; font-size: clamp(22px, 4vw, 27px); }
+.panel > p.muted { margin: 0 0 20px; font-size: 14px; }
+label { display: block; margin: 20px 0 9px; font-size: 14px; font-weight: 650; }
 input, select, textarea {
-    width: 100%; padding: 13px;
-    background: #090e1b; color: #f4f6ff;
-    border: 1px solid #34405e; border-radius: 9px;
-    font: inherit;
+  display: block; width: 100%; min-width: 0; padding: 14px 15px;
+  border: 1px solid #394661; border-radius: 11px;
+  background: #0a1120; color: #f4f6ff; font: inherit; font-size: 15px;
 }
-textarea { min-height: 150px; resize: vertical; line-height: 1.6; }
+input::placeholder, textarea::placeholder { color: #7f8ba5; }
+textarea { min-height: 145px; resize: vertical; line-height: 1.65; }
 input:focus, select:focus, textarea:focus {
-    outline: 2px solid #8170ff; outline-offset: 1px;
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(147,132,255,.16);
 }
 button {
-    width: 100%; margin-top: 20px; padding: 15px;
-    background: #7664ff; color: white; border: 0;
-    border-radius: 9px; font-size: 16px;
-    font-weight: 700; cursor: pointer;
+  width: 100%; margin-top: 24px; padding: 15px 18px;
+  border: 0; border-radius: 11px;
+  background: linear-gradient(110deg, #7565ee, #9282ff);
+  color: white; font: inherit; font-weight: 750; cursor: pointer;
 }
-button:hover { background: #6552ed; }
-.result {
-    white-space: pre-wrap; overflow-wrap: anywhere;
-    line-height: 1.8; font-size: 15px;
+button:hover { filter: brightness(1.1); }
+button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+.result { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.85; font-size: 15px; color: #dce4f8; }
+.error { color: #ffb9c4; }
+.panel.error { border-color: #713d50; background: #211722; }
+footer { padding-top: 8px; text-align: center; color: #7d89a4; font-size: 12px; }
+@media (max-width: 600px) {
+  body { padding: 18px 12px; }
+  nav a { flex-basis: 100%; }
+  .panel { border-radius: 14px; margin-bottom: 16px; }
+  textarea { min-height: 125px; }
 }
-.error { color: #ffaaaa; }
-footer { text-align: center; color: #77819d; margin-top: 28px; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition: none !important; }
+}
 </style>
+
 </head>
 <body>
 <main>
@@ -166,9 +206,13 @@ footer { text-align: center; color: #77819d; margin-top: 28px; }
 {% if page == "resume" %}
     <h2>Resume Analyzer</h2>
     <p class="muted">Get personalized resume feedback powered by Gemini AI.</p>
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
+        <label for="resume_pdf">Upload resume PDF (optional)</label>
+        <input id="resume_pdf" name="resume_pdf" type="file" accept=".pdf,application/pdf">
+        <p class="muted">Maximum PDF size: 5 MB.</p>
+
         <label for="resume">Your resume</label>
-        <textarea id="resume" name="resume" required maxlength="25000"
+        <textarea id="resume" name="resume" maxlength="25000"
           placeholder="Paste your resume text here...">{{ resume }}</textarea>
 
         <label for="job">Target job description (optional)</label>
@@ -205,6 +249,12 @@ footer { text-align: center; color: #77819d; margin-top: 28px; }
 <section class="panel">
     <h2>{% if page == "resume" %}Your AI Career Report{% else %}Your Interview Prep{% endif %}</h2>
     <div class="result">{{ result }}</div>
+    {% if page == "resume" and report_token %}
+    <p>
+        <a href="{{ url_for('download_report', token=report_token) }}"
+           download>Download AI Career Report (.txt)</a>
+    </p>
+    {% endif %}
 </section>
 {% endif %}
 
@@ -223,22 +273,50 @@ footer { text-align: center; color: #77819d; margin-top: 28px; }
 
 
 def ask_gemini(prompt):
-    """Send a prompt to Gemini and return its text response."""
+    """Send a prompt to Gemini, retrying temporary service failures."""
+    import time
+
     if not client:
         raise RuntimeError(
             "GEMINI_API_KEY was not found. Check your local .env file."
         )
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt
-    )
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=prompt
+            )
 
-    answer = response.text
-    if not answer:
-        raise RuntimeError("Gemini returned an empty response.")
+            answer = response.text
+            if not answer:
+                raise RuntimeError("Gemini returned an empty response.")
+            return answer
 
-    return answer
+        except Exception as exc:
+            message = str(exc).lower()
+            temporary = any(
+                marker in message
+                for marker in (
+                    "503", "unavailable", "high demand",
+                    "429", "resource exhausted", "too many requests",
+                    "500", "502", "504", "internal server error",
+                    "deadline exceeded"
+                )
+            )
+
+            if not temporary or attempt == 2:
+                raise
+
+            delay = attempt + 1
+            app.logger.warning(
+                "Temporary Gemini failure; retrying in %s second(s) "
+                "(attempt %s of 3).",
+                delay, attempt + 2
+            )
+            time.sleep(delay)
+
+    raise RuntimeError("Gemini could not complete the request.")
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -252,12 +330,46 @@ def resume_analyzer():
     if request.method == "POST":
         resume = request.form.get("resume", "").strip()
         job = request.form.get("job", "").strip()
+        uploaded_pdf = request.files.get("resume_pdf")
 
-        if not resume:
-            error = "Please paste your resume first."
-        elif len(resume) > 25000 or len(job) > 15000:
+        if uploaded_pdf and uploaded_pdf.filename:
+            if not uploaded_pdf.filename.lower().endswith(".pdf"):
+                error = "Please upload a PDF file."
+            else:
+                try:
+                    data = uploaded_pdf.stream.read(5 * 1024 * 1024 + 1)
+                    if len(data) > 5 * 1024 * 1024:
+                        error = "Your PDF must be 5 MB or smaller."
+                    else:
+                        from io import BytesIO
+                        from pypdf import PdfReader
+                        reader = PdfReader(BytesIO(data))
+                        if reader.is_encrypted:
+                            error = "Please upload an unencrypted PDF."
+                        else:
+                            extracted = "\\n".join(
+                                page.extract_text() or ""
+                                for page in reader.pages
+                            ).strip()
+                            if not extracted:
+                                error = (
+                                    "No selectable text found. If this is a "
+                                    "scanned PDF, paste the resume text instead."
+                                )
+                            elif len(extracted) > 25000:
+                                error = "Extracted resume exceeds 25,000 characters."
+                            else:
+                                resume = extracted
+                except Exception:
+                    app.logger.warning("Resume PDF extraction failed")
+                    error = "Could not read the PDF. Upload a valid, unencrypted PDF."
+
+        if not error and not resume:
+            error = "Please upload a PDF or paste your resume text."
+        elif not error and (len(resume) > 25000 or len(job) > 15000):
             error = "Please shorten your resume or job description."
-        else:
+
+        if not error:
             prompt = f"""
 You are NEXUS AI, a professional resume reviewer and career coach.
 
@@ -297,19 +409,70 @@ candidate lacks a skill. Clearly label suggestions as suggestions.
                 result = ask_gemini(prompt)
             except Exception as exc:
                 app.logger.warning(
-                    "Resume analysis failed: %s", type(exc).__name__
+                    "Resume analysis failed: %s: %s",
+                    type(exc).__name__, str(exc)[:500]
                 )
-                error = (
-                    "Gemini could not complete the analysis. Check your "
-                    "internet connection, API quota, model access, and "
-                    "Terminal logs. Your API key is not displayed."
-                )
+                details = str(exc).lower()
+                if any(code in details for code in (
+                    "503", "unavailable", "high demand",
+                    "500", "502", "504"
+                )):
+                    error = (
+                        "Gemini AI is temporarily busy. Your resume upload "
+                        "was received, but the report could not be generated. "
+                        "Please wait a minute and try again."
+                    )
+                elif any(code in details for code in (
+                    "429", "resource exhausted", "too many requests"
+                )):
+                    error = (
+                        "Gemini AI has reached a temporary usage limit. "
+                        "Please wait a little and try again."
+                    )
+                else:
+                    error = (
+                        "Gemini could not complete the analysis. Please "
+                        "check your connection and try again. If it continues, "
+                        "check the Terminal logs. Your API key is not displayed."
+                    )
+
+    report_token = None
+    if result:
+        now = time.time()
+        for key in list(REPORTS):
+            if REPORTS[key]["expires"] <= now:
+                del REPORTS[key]
+
+        report_token = secrets.token_urlsafe(24)
+        REPORTS[report_token] = {
+            "text": result,
+            "expires": now + 1800,
+        }
 
     return render_template_string(
         PAGE, page="resume", resume=resume, job=job,
+        report_token=report_token,
         role="", experience="Fresher", skills="",
         result=result, error=error
     )
+
+
+@app.route("/download-report/<token>")
+@login_required
+def download_report(token):
+    report = REPORTS.get(token)
+    if not report or report["expires"] <= time.time():
+        REPORTS.pop(token, None)
+        return "This report has expired. Please generate it again.", 404
+
+    response = send_file(
+        BytesIO(report["text"].encode("utf-8")),
+        mimetype="text/plain; charset=utf-8",
+        as_attachment=True,
+        download_name="nexus-ai-career-report.txt",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.route("/interview", methods=["GET", "POST"])
